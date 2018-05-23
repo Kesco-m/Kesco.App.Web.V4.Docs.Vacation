@@ -1,0 +1,76 @@
+*{
+}
+BODY
+{
+	background-color:#efefef;
+	overflow:auto;
+	font-size: 8pt; 
+	font-family: Verdana;
+}
+.BlackA A		
+{
+	color:blue;
+	text-decoration: none;
+}
+.BlackA A:hover
+{
+	color:blue;
+	text-decoration: none;
+}
+.BlackA A:active
+{
+	color:blue;
+	background-color:Gainsboro;
+	text-decoration: none;
+}
+H3
+{
+	font-weight: bold;
+	font-size: 10pt; 
+	margin: 0px;
+}
+
+TABLE
+{
+	font-size: 8pt; 
+	font-family: Verdana;
+	border-spacing: 2x;
+	border-collapse: separate;
+	
+	border-bottom: 1px solid ActiveBorder;
+	border-right: 1px solid ActiveBorder;
+	border-top: 1px solid InactiveBorder;
+	border-left: 1px solid InactiveBorder;
+}
+
+TABLE td
+{
+	padding: 5px;
+	border-bottom: 1px solid InactiveBorder;
+	border-right: 1px solid InactiveBorder;
+	border-top: 1px solid ActiveBorder;
+	border-left: 1px solid ActiveBorder;
+}
+
+.BlackA A		
+{
+	color:blue;
+	text-decoration: none;
+}
+.BlackA A:hover
+{
+	color:blue;
+	text-decoration: none;
+}
+.BlackA A:active
+{
+	color:blue;
+	background-color:Gainsboro;
+	text-decoration: none;
+}
+H3
+{
+	font-weight: bold;
+	font-size: 10pt; 
+	margin: 0px;
+}
