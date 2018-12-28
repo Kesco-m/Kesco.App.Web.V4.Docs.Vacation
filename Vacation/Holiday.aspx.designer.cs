@@ -100,7 +100,7 @@ namespace Kesco.App.Web.Docs.Vacation {
         /// Автоматически создаваемое поле.
         /// Для изменения переместите объявление поля из файла конструктора в файл кода программной части.
         /// </remarks>
-        protected global::System.Web.UI.HtmlControls.HtmlInputImage btnAddSubForm;
+        protected global::Kesco.Lib.Web.Controls.V4.Button btnAddSubForm;
         
         /// <summary>
         /// selSub элемент управления.
@@ -136,7 +136,7 @@ namespace Kesco.App.Web.Docs.Vacation {
         /// Автоматически создаваемое поле.
         /// Для изменения переместите объявление поля из файла конструктора в файл кода программной части.
         /// </remarks>
-        protected global::Kesco.Lib.Web.Controls.V4.TextArea textDescription;
+        protected global::Kesco.Lib.Web.Controls.V4.TextBox textDescription;
         
         /// <summary>
         /// SubErrMsg элемент управления.

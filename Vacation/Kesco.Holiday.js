@@ -20,7 +20,7 @@ var StrResources = {
 * Формирует HTML таблицу из полученых XML данных
 * @xml_data - данные в формате XML
 */
-function displaySubTable(xml_data) {
+function displaySubTable    (xml_data) {
 
     var xmlDoc;
 
@@ -41,21 +41,31 @@ function displaySubTable(xml_data) {
         var disabled = lineItems[i].getAttribute("disabled");
         var description = lineItems[i].getAttribute("description");
 
-        html += "<tr><td width='16'>"
-        + (disabled != 1 ? "<input alt='" + StrResources.SubDeleteAlt + "' title='" + StrResources.SubDeleteTitle + "' onclick='deleteSub(" + lineItems[i].getAttribute("id") + ",false)' type='image' src='/Styles/Delete.gif' />" : "")
-        + "</td><td><a href='javascript: editSub("
-        + lineItems[i].getAttribute("id") + ");'>"
-        + lineItems[i].getAttribute("person");
+        html += "<tr>";
 
+        if (disabled != 1) {
+
+            html += "<td width='16'>";
+            html += "<input alt='" + StrResources.SubDeleteAlt + "' title='" + StrResources.SubDeleteTitle + "' onclick='deleteSub(" + lineItems[i].getAttribute("id") + ",false);' type='image' src='/Styles/Delete.gif' style='cursor:pointer' />";
+            html += "</td>";
+
+            html += "<td width='16'>";
+            html += "<input onclick='editSub(" + lineItems[i].getAttribute("id") + ");' type='image' src='/Styles/edit.gif' style='cursor:pointer' />";
+            html += "</td>";
+        }
+        html += "<td" + (disabled != 1?"":" colspan=3") + ">";
+        html += "<a href = '" + lineItems[i].getAttribute("href") + "' target='_blank' style='cursor:pointer;' class='v4_callerControl' caller-type='2' data-id='" + lineItems[i].getAttribute("personId") + "'>" + lineItems[i].getAttribute("person") + "</a>";
         if (description)
-            html += "&nbsp;(" + description + ")&nbsp;"
+            html += "&nbsp;(" + description + ")&nbsp;";
 
-        html += "</a></td></tr>"
+        html += "</td>";
+        html += "</tr>";
     }
 
     html += "</tbody>";
 
     document.getElementById("tSub").innerHTML = html;
+    v4_setToolTip();
 }
 
 /*
@@ -106,16 +116,15 @@ displaySub.sub_dialog = null;
 * @sub_id - идентификатор замещения в приложении
 * @read_only - признак того, что изменение замещения запрещено
 */
-function displaySub(sub_id, read_only) {
+function displaySub(sub_id, read_only, subTitle) {
 
     var dlgSelector = "#editSub";
    if (null == displaySub.sub_dialog) {
-
        displaySub.sub_dialog = $(dlgSelector).dialog({
            autoOpen: false,
            resizable: false,
            modal: true,
-           title: StrResources.SubTitle,
+           title: StrResources.SubTitle + " " + subTitle,
            width: 380,
            //open: function () { $("#btnSave").focus();},
            close: function (event, ui) { onCloseSub(); }
@@ -144,5 +153,6 @@ function displaySub(sub_id, read_only) {
 function closeSubDialog() {
     if (displaySub.sub_dialog) {
         displaySub.sub_dialog.dialog('close');
+        displaySub.sub_dialog = null;
     }
 }

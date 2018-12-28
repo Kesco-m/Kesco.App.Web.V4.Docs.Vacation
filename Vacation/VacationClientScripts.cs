@@ -24,9 +24,9 @@ namespace Kesco.App.Web.Docs.Vacation
         }
 
         //Метод открывает диалог редактирования замещения
-        public static void DisplaySub(Kesco.Lib.Web.Controls.V4.Common.Page p, int sub_id, bool read_only)
+        public static void DisplaySub(Kesco.Lib.Web.Controls.V4.Common.Page p, int sub_id, bool read_only, string subTitle)
         {
-            p.JS.Write("displaySub({0}, {1});", sub_id, read_only ? "true" : "false");
+            p.JS.Write("displaySub({0}, {1}, \"{2}\");", sub_id, read_only ? "true" : "false", subTitle);
         }
 
         //Метод закрывает диалог редактирования замещения
