@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kesco.Lib.Entities", "Kesco
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kesco.Lib.Localization", "Kesco.Lib.Localization\Kesco.Lib.Localization.csproj", "{895BE7DB-796B-40DD-B338-01B9C53F8308}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kesco.Lib.Web.Comet", "Kesco.Lib.Web.Comet\Kesco.Lib.Web.Comet.csproj", "{EB32DBFE-59E0-4F6C-A718-BE9BA708C64F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kesco.Lib.Web.Comet", "Kesco.Lib.Web.Comet\Kesco.Lib.Web.Comet\Kesco.Lib.Web.Comet.csproj", "{EB32DBFE-59E0-4F6C-A718-BE9BA708C64F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kesco.Lib.Web.Controls.V4", "Kesco.Lib.Web.Controls.V4\Kesco.Lib.Web.Controls.V4.csproj", "{C24FDAB8-D076-4F0C-8932-DB8160E4C4EF}"
 EndProject
@@ -21,11 +21,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kesco.Lib.ConvertExtention"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kesco.Lib.BaseExtention", "Kesco.Lib.BaseExtention\Kesco.Lib.BaseExtention.csproj", "{D26C8D93-C51B-4F61-ADA8-8527A18E4C41}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kesco.App.Web.Docs.Vacation", "Vacation\Kesco.App.Web.Docs.Vacation.csproj", "{44FFE0C0-6434-4818-8684-71FA621F051F}"
-	ProjectSection(ProjectDependencies) = postProject
-		{895BE7DB-796B-40DD-B338-01B9C53F8308} = {895BE7DB-796B-40DD-B338-01B9C53F8308}
-		{EB32DBFE-59E0-4F6C-A718-BE9BA708C64F} = {EB32DBFE-59E0-4F6C-A718-BE9BA708C64F}
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vacation", "Vacation\Vacation.csproj", "{44FFE0C0-6434-4818-8684-71FA621F051F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
