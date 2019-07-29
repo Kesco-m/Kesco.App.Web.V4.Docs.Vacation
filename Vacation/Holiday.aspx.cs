@@ -5,12 +5,12 @@ using System.Data;
 using System.Linq;
 using System.Web.Caching;
 using System.Xml.Linq;
+using Kesco.Lib.BaseExtention;
 using Kesco.Lib.BaseExtention.Enums.Controls;
 using Kesco.Lib.BaseExtention.Enums.Corporate;
 using Kesco.Lib.DALC;
 using Kesco.Lib.Entities;
 using Kesco.Lib.Entities.Corporate;
-using Kesco.Lib.Entities.Documents;
 using Kesco.Lib.Entities.Persons.PersonOld;
 using Kesco.Lib.Log;
 using Kesco.Lib.Web.Controls.V4;
@@ -23,18 +23,24 @@ namespace Kesco.App.Web.Docs.Vacation
     //Класс страницы для создания заявления на отпуск
     public partial class Holiday : DocPage
     {
-        //Дополнение к идентификатору документа для создания ключа в Chache
+        //Дополнение к идентификатору документа для создания ключа в Cache
         private const string CacheSubs = "_subs";
+
         //Код территории по умолчанию
-        private const int defTerritory = 188;
+        private const int DefTerritory = 188;
+
         //Объект для синхронизации доступа к сохраненнным в кэше замещениям
-        private static readonly object syncCacheSubs = new object();
+        private static readonly object SyncCacheSubs = new object();
+
         //Формат даты по умолчанию
         private readonly string _date_format = "dd.MM.yyyy";
+
         //Компания, в которой работает сотрудник, от имени которого составляется заявление
         private PersonOld _company;
+
         //Сотрудник, от имени которого составляется заявление
         private Employee _empl;
+
         //Список замещений сотрудников связанных с документом
         private List<Substitution> _subs = new List<Substitution>();
 
@@ -42,7 +48,17 @@ namespace Kesco.App.Web.Docs.Vacation
         {
             _empl = CurrentUser;
             if (_empl.Employer == null) return;
-            _company = GetObjectById(typeof (PersonOld), _empl.Employer.Id) as PersonOld;
+            _company = GetObjectById(typeof(PersonOld), _empl.Employer.Id) as PersonOld;
+        }
+
+        protected override void EntityInitialization(Entity copy = null)
+        {
+            if (copy == null)
+                Doc = new Lib.Entities.Documents.EF.Applications.Vacation(_empl);
+            else
+                Doc = (Lib.Entities.Documents.EF.Applications.Vacation) copy;
+
+            Doc.Date = DateTime.Today;
         }
 
         protected override void ProcessCommand(string cmd, NameValueCollection param)
@@ -98,21 +114,16 @@ namespace Kesco.App.Web.Docs.Vacation
 
             //Сохранение замещений в кэше приложения
             if (to_keep_subs.Count > 0)
-            {
-                lock (syncCacheSubs)
+                lock (SyncCacheSubs)
                 {
                     var copied_subs = new List<Substitution>();
 
                     //Копирование замещений
-                    foreach (var s in to_keep_subs)
-                    {
-                        copied_subs.Add(s.Clone());
-                    }
+                    foreach (var s in to_keep_subs) copied_subs.Add(s.Clone());
 
                     Cache.Insert(Doc.Id + CacheSubs, copied_subs, null, Cache.NoAbsoluteExpiration,
                         TimeSpan.FromSeconds(300));
                 }
-            }
         }
 
         protected override void OnDocDateChanged(object sender, ProperyChangedEventArgs e)
@@ -121,24 +132,12 @@ namespace Kesco.App.Web.Docs.Vacation
             dateFrom.RenderNtf();
         }
 
-        protected override void DocumentInitialization(Document copy = null)
-        {
-            if (copy == null)
-                Doc = new Lib.Entities.Documents.EF.Applications.Vacation(_empl);
-            else
-            {
-                Doc = (Lib.Entities.Documents.EF.Applications.Vacation) copy;
-            }
-
-            Doc.Date = DateTime.Today;
-        }
-
         protected override void DocumentToControls()
         {
             var vd = Doc as Lib.Entities.Documents.EF.Applications.Vacation;
 
             if (_empl.EmployeeId != vd.EmployeeFrom.ValueInt)
-                _empl = GetObjectById(typeof (Employee), vd.EmployeeFrom.ValueString) as Employee;
+                _empl = GetObjectById(typeof(Employee), vd.EmployeeFrom.ValueString) as Employee;
 
             //selPerson.Value = ((int)vd.EmployeeFrom.Value).ToString();
             //selCompany.Value = ((int)vd.CompanyFrom.Value).ToString();
@@ -172,10 +171,7 @@ namespace Kesco.App.Web.Docs.Vacation
 
             selDirector.WeakList = GetDirectors();
             if (null != selDirector.WeakList && selDirector.WeakList.Count == 1)
-            {
                 vd.EmployeeTo.Value = selDirector.WeakList[0];
-                //selDirector.Value = selDirector.WeakList[0];
-            }
         }
 
         protected override void SetControlProperties()
@@ -232,21 +228,19 @@ namespace Kesco.App.Web.Docs.Vacation
             {
                 DocumentToControls();
                 DocDateReadOnly = true;
+                SetDescription();
             }
             else
             {
                 DocDateReadOnly = !DocEditable;
-                lock (syncCacheSubs)
+                lock (SyncCacheSubs)
                 {
                     var old_subs = (List<Substitution>) Cache[Doc.Id + CacheSubs];
 
                     //Загрузка и копирование замещений из старой страницы
                     if (null != old_subs)
                     {
-                        foreach (var s in old_subs)
-                        {
-                            _subs.Add(s.Clone());
-                        }
+                        foreach (var s in old_subs) _subs.Add(s.Clone());
 
                         ResolveSubErrorrs(true);
                     }
@@ -314,7 +308,25 @@ namespace Kesco.App.Web.Docs.Vacation
 
         protected void cbType_Changed(object sender, ProperyChangedEventArgs e)
         {
-            Doc.Description = (selPerson.ValueText + " " + cbType.ValueText).Trim();
+            SetDescription();
+        }
+
+        private void SetDescription()
+        {
+            var fio = string.Empty;
+            var Empl = new Employee(selPerson.Value);
+            fio = IsRusLocal ? Empl.FIO : Empl.FIOEn;
+
+            var vacType = string.Empty;
+            var VacType = new VacationType(cbType.Value);
+            vacType = VacType.ShortName;
+            if (!vacType.IsNullEmptyOrZero()) vacType += ".";
+
+            var date = "";
+            if (dateFrom.Value != "" || dateTo.Value != "")
+                date = dateFrom.Value + " - " + dateTo.Value;
+
+            Doc.Description = (fio + " " + vacType + " " + date).Trim();
             SetSubstitutionDescription();
         }
 
@@ -332,17 +344,28 @@ namespace Kesco.App.Web.Docs.Vacation
             var to = dateTo.ValueDate.GetValueOrDefault(DateTime.MaxValue);
 
             if (to < DateTime.Today)
-                ntf.Add(Resx.GetString("Vacation_NtfDateInPast"), NtfStatus.Information);
+                ntf.Add(new Notification
+                {
+                    Message = Resx.GetString("Vacation_NtfDateInPast"), Status = NtfStatus.Information, SizeIsNtf = true
+                });
 
             if (to < Doc.Date)
-                ntf.Add(Resx.GetString("Vacation_NtfDateLessThatDateDoc"), NtfStatus.Error);
+                ntf.Add(new Notification
+                {
+                    Message = Resx.GetString("Vacation_NtfDateLessThatDateDoc"), Status = NtfStatus.Error,
+                    SizeIsNtf = true
+                });
+
 
             if (!dateFrom.ValueDate.HasValue) return;
 
             var from = dateFrom.ValueDate.GetValueOrDefault(DateTime.MinValue);
 
             if (to < from)
-                ntf.Add(Resx.GetString("Vacation_NtfDatesAreNotValid"), NtfStatus.Error);
+                ntf.Add(new Notification
+                {
+                    Message = Resx.GetString("Vacation_NtfDatesAreNotValid"), Status = NtfStatus.Error, SizeIsNtf = true
+                });
         }
 
         private void dateFrom_OnRenderNtf(object sender, Ntf ntf)
@@ -354,10 +377,17 @@ namespace Kesco.App.Web.Docs.Vacation
             var from = dateFrom.ValueDate.GetValueOrDefault(DateTime.MinValue);
 
             if (from < DateTime.Today)
-                ntf.Add(Resx.GetString("Vacation_NtfDateInPast"), NtfStatus.Information);
+                ntf.Add(new Notification
+                {
+                    Message = Resx.GetString("Vacation_NtfDateInPast"), Status = NtfStatus.Information, SizeIsNtf = true
+                });
 
             if (from < Doc.Date)
-                ntf.Add(Resx.GetString("Vacation_NtfDateLessThatDateDoc"), NtfStatus.Error);
+                ntf.Add(new Notification
+                {
+                    Message = Resx.GetString("Vacation_NtfDateLessThatDateDoc"), Status = NtfStatus.Error,
+                    SizeIsNtf = true
+                });
 
             dateTo.RenderNtf();
         }
@@ -368,13 +398,23 @@ namespace Kesco.App.Web.Docs.Vacation
 
             if (!selDirector.ValueInt.HasValue) return;
 
-            var director = GetObjectById(typeof (PersonOld), selDirector.Value) as PersonOld;
+            var director = GetObjectById(typeof(PersonOld), selDirector.Value) as PersonOld;
             if (director == null || director.Unavailable)
-                ntf.Add(Resx.GetString("Vacation_NtfPersonIsNotAvailable"), NtfStatus.Error);
+            {
+                ntf.Add(new Notification
+                {
+                    Message = Resx.GetString("Vacation_NtfPersonIsNotAvailable"), Status = NtfStatus.Error,
+                    SizeIsNtf = true
+                });
+            }
             else
             {
                 if (director.EndDate > Doc.Date)
-                    ntf.Add(Resx.GetString("Vacation_NtfNotExistsOnDocDate"), NtfStatus.Error);
+                    ntf.Add(new Notification
+                    {
+                        Message = Resx.GetString("Vacation_NtfNotExistsOnDocDate"), Status = NtfStatus.Error,
+                        SizeIsNtf = true
+                    });
 
                 if (_company != null && !_company.Unavailable)
                 {
@@ -386,8 +426,12 @@ namespace Kesco.App.Web.Docs.Vacation
                     //if (test_obj == null) ntf.Add(Resx.GetString("Vacation_NtfWorkStaff"), NtfStatus.Error);
 
                     var listOfDirectors = GetDirectors();
-                    if (!listOfDirectors.Contains(selDirector.Value))
-                        ntf.Add(Resx.GetString("Vacation_NtfNoFirstSign"), NtfStatus.Error);
+                    if (listOfDirectors != null && !listOfDirectors.Contains(selDirector.Value))
+                        ntf.Add(new Notification
+                        {
+                            Message = Resx.GetString("Vacation_NtfNoFirstSign"), Status = NtfStatus.Error,
+                            SizeIsNtf = true
+                        });
                 }
             }
         }
@@ -398,13 +442,24 @@ namespace Kesco.App.Web.Docs.Vacation
 
             if (!selCompany.ValueInt.HasValue) return;
             if (_company == null) return;
-            if (_company.Unavailable) ntf.Add(Resx.GetString("Vacation_NtfPersonIsNotAvailable"), NtfStatus.Error);
+            if (_company.Unavailable)
+            {
+                ntf.Add(new Notification
+                {
+                    Message = Resx.GetString("Vacation_NtfPersonIsNotAvailable"), Status = NtfStatus.Error,
+                    SizeIsNtf = true
+                });
+            }
             else
             {
                 TestEmplCompanyNtf(ntf);
 
                 if (_company.EndDate > Doc.Date)
-                    ntf.Add(Resx.GetString("Vacation_NtfNotExistsOnDocDate"), NtfStatus.Error);
+                    ntf.Add(new Notification
+                    {
+                        Message = Resx.GetString("Vacation_NtfNotExistsOnDocDate"), Status = NtfStatus.Error,
+                        SizeIsNtf = true
+                    });
             }
         }
 
@@ -414,13 +469,24 @@ namespace Kesco.App.Web.Docs.Vacation
 
             if (!selPerson.ValueInt.HasValue) return;
 
-            if (_empl.Unavailable) ntf.Add(Resx.GetString("Vacation_NtfPersonIsNotAvailable"), NtfStatus.Error);
+            if (_empl.Unavailable)
+            {
+                ntf.Add(new Notification
+                {
+                    Message = Resx.GetString("Vacation_NtfPersonIsNotAvailable"), Status = NtfStatus.Error,
+                    SizeIsNtf = true
+                });
+            }
             else
             {
                 TestEmplCompanyNtf(ntf);
 
                 if (_empl.PersonEmployee.EndDate > Doc.Date)
-                    ntf.Add(Resx.GetString("Vacation_NtfNotExistsOnDocDate"), NtfStatus.Error);
+                    ntf.Add(new Notification
+                    {
+                        Message = Resx.GetString("Vacation_NtfNotExistsOnDocDate"), Status = NtfStatus.Error,
+                        SizeIsNtf = true
+                    });
             }
         }
 
@@ -526,12 +592,12 @@ namespace Kesco.App.Web.Docs.Vacation
             selCompany.Value = "";
             selDirector.Value = "";
             if (selCompany.WeakList != null) selCompany.WeakList.Clear();
-            if (selDirector.WeakList!=null) selDirector.WeakList.Clear();
+            if (selDirector.WeakList != null) selDirector.WeakList.Clear();
             if (selPerson.Value.Length == 0) return;
 
-            _empl = GetObjectById(typeof (Employee), selPerson.Value) as Employee;
+            _empl = GetObjectById(typeof(Employee), selPerson.Value) as Employee;
             var vd = Doc as Lib.Entities.Documents.EF.Applications.Vacation;
-            
+
             if (null == _empl)
                 vd.PersonFrom.Value = null;
             else
@@ -543,7 +609,7 @@ namespace Kesco.App.Web.Docs.Vacation
 
             TestEmplInfoFilled();
 
-            Doc.Description = (selPerson.ValueText + " " + cbType.ValueText).Trim();
+            SetDescription();
         }
 
         protected void selCompany_Changed(object sender, ProperyChangedEventArgs e)
@@ -552,13 +618,13 @@ namespace Kesco.App.Web.Docs.Vacation
             if (selDirector.WeakList != null) selDirector.WeakList.Clear();
             if (selCompany.Value.Length == 0) return;
 
-            _company = GetObjectById(typeof (PersonOld), selCompany.Value) as PersonOld;
+            _company = GetObjectById(typeof(PersonOld), selCompany.Value) as PersonOld;
             if (_company == null || _company.Unavailable) return;
 
             selDirector.WeakList = GetDirectors();
             if (null != selDirector.WeakList && selDirector.WeakList.Count == 1)
             {
-                Lib.Entities.Documents.EF.Applications.Vacation vd = Doc as Lib.Entities.Documents.EF.Applications.Vacation;
+                var vd = Doc as Lib.Entities.Documents.EF.Applications.Vacation;
                 vd.EmployeeTo.Value = selDirector.WeakList[0];
                 selDirector.Value = selDirector.WeakList[0];
             }
@@ -610,6 +676,7 @@ namespace Kesco.App.Web.Docs.Vacation
         {
             SetDaysAndDates(sender);
             ShowHideSubs();
+            SetDescription();
         }
 
         //Проверка, того что лицо является сотрудником компании, отображение уведомления
@@ -623,7 +690,9 @@ namespace Kesco.App.Web.Docs.Vacation
             var test_obj = DBManager.ExecuteScalar(SQLQueries.SELECT_ТестМестоРаботыСотрудника, CommandType.Text,
                 Config.DS_user, args);
 
-            if (test_obj == DBNull.Value) ntf.Add(Resx.GetString("Vacation_NtfWorkStaff"), NtfStatus.Error);
+            if (test_obj == DBNull.Value)
+                ntf.Add(new Notification
+                    {Message = Resx.GetString("Vacation_NtfWorkStaff"), Status = NtfStatus.Error, SizeIsNtf = true});
         }
 
         //Загрузка замещений по документу из БД
@@ -654,25 +723,24 @@ namespace Kesco.App.Web.Docs.Vacation
         private void SendSubs()
         {
             var xmlSubs = new XElement("subs", _subs.OrderBy(sub => sub.person).Select(sub =>
-            {
-                var sub_to = sub.to > DateTime.MinValue ? sub.to.AddDays(-1) : sub.to;
-                var disabled = sub.code != 0 && sub_to <= DateTime.Today ? 1 : 0;
-                var sub_description = string.Empty;
-                if (sub.from != dateFrom.ValueDate || sub_to != dateTo.ValueDate)
                 {
-                    sub_description = string.Format(Resx.GetString("Vacation_SubDates"), sub.from.ToString(_date_format),
-                        sub_to.ToString(_date_format));
-                }
+                    var sub_to = sub.to > DateTime.MinValue ? sub.to.AddDays(-1) : sub.to;
+                    var disabled = sub.code != 0 && sub_to <= DateTime.Today ? 1 : 0;
+                    var sub_description = string.Empty;
+                    if (sub.from != dateFrom.ValueDate || sub_to != dateTo.ValueDate)
+                        sub_description = string.Format(Resx.GetString("Vacation_SubDates"),
+                            sub.from.ToString(_date_format),
+                            sub_to.ToString(_date_format));
 
-                return new XElement("sub",
-                    new XAttribute("id", sub.id),
-                    new XAttribute("personId", sub.person_id),
-                    new XAttribute("person", sub.person),
-                    new XAttribute("description", sub_description),
-                    new XAttribute("href", Config.user_form + "?id=" + sub.person_id),
-                    new XAttribute("disabled", disabled));
-            }
-                ));
+                    return new XElement("sub",
+                        new XAttribute("id", sub.id),
+                        new XAttribute("personId", sub.person_id),
+                        new XAttribute("person", sub.person),
+                        new XAttribute("description", sub_description),
+                        new XAttribute("href", Config.user_form + "?id=" + sub.person_id),
+                        new XAttribute("disabled", disabled));
+                }
+            ));
 
             VacationClientScripts.SetSubs(this, xmlSubs.ToString());
         }
@@ -688,13 +756,9 @@ namespace Kesco.App.Web.Docs.Vacation
         private void DisplaySubError(string err_msg, bool fDialog)
         {
             if (fDialog)
-            {
                 SubErrMsg.Value = err_msg;
-            }
             else
-            {
                 ShowMessage(err_msg, Resx.GetString("Vacation_ErrSubTitle"));
-            }
         }
 
         /// <summary>
@@ -722,9 +786,7 @@ namespace Kesco.App.Web.Docs.Vacation
                 var nextDay = DateTime.Today.AddDays(1);
                 if (dateSubFrom.ValueDate.GetValueOrDefault() < nextDay &&
                     dateSubTo.ValueDate.GetValueOrDefault() >= nextDay)
-                {
                     dateSubFrom.ValueDate = nextDay;
-                }
 
                 //Если дата окнчания в прошлом или сегодня, то создается замещение на один день после начала
                 if (dateSubTo.ValueDate.GetValueOrDefault() < dateSubFrom.ValueDate.GetValueOrDefault())
@@ -781,8 +843,9 @@ namespace Kesco.App.Web.Docs.Vacation
             }
 
             if (dateSubFrom.ValueDate < dateFrom.ValueDate || dateSubFrom.ValueDate > dateTo.ValueDate
-                || dateSubTo.ValueDate < dateFrom.ValueDate || dateSubTo.ValueDate > dateTo.ValueDate
-                )
+                                                           || dateSubTo.ValueDate < dateFrom.ValueDate ||
+                                                           dateSubTo.ValueDate > dateTo.ValueDate
+            )
             {
                 DisplaySubError(Resx.GetString("Vacation_ErrSubDateSubstitution"), sub_id >= 0);
                 return;
@@ -833,7 +896,7 @@ namespace Kesco.App.Web.Docs.Vacation
                         var obj_code = DBManager.ExecuteScalar(SQLQueries.INSERT_Замещения, CommandType.Text,
                             Config.DS_user, ins_args);
                         if (obj_code != DBNull.Value)
-                            sub.code = Decimal.ToInt32((Decimal) obj_code);
+                            sub.code = decimal.ToInt32((decimal) obj_code);
                     }
                     else
                     {
@@ -949,7 +1012,7 @@ namespace Kesco.App.Web.Docs.Vacation
             var subTitle = "";
             if (selPerson.Value.Length > 0)
             {
-                var empl = GetObjectById(typeof (Employee), selPerson.Value) as Employee;
+                var empl = GetObjectById(typeof(Employee), selPerson.Value) as Employee;
                 if (empl != null && !empl.Unavailable)
                     subTitle = empl.FIO;
             }
@@ -962,10 +1025,7 @@ namespace Kesco.App.Web.Docs.Vacation
         /// </summary>
         private void SetSubstitutionDescription()
         {
-            foreach (var s in _subs.Where(sub => sub.code == 0))
-            {
-                s.description = cbType.ValueText;
-            }
+            foreach (var s in _subs.Where(sub => sub.code == 0)) s.description = cbType.ValueText;
         }
 
         /// <summary>
@@ -980,7 +1040,8 @@ namespace Kesco.App.Web.Docs.Vacation
             args.Add("@Организация", selCompany.Value);
             args.Add("@ДатаДокумента", default(DateTime) == Doc.Date ? DateTime.Now : Doc.Date);
 
-            var dtDirectors = DBManager.GetData(SQLQueries.SELECT_Руководитель, Config.DS_person, CommandType.Text, args);
+            var dtDirectors =
+                DBManager.GetData(SQLQueries.SELECT_Руководитель, Config.DS_person, CommandType.Text, args);
 
             return dtDirectors.AsEnumerable().Select(p => p.Field<int>("КодЛицаПотомка").ToString()).ToList();
         }
@@ -1000,8 +1061,9 @@ namespace Kesco.App.Web.Docs.Vacation
             foreach (var s in _subs.Where(sub => sub.code == 0))
             {
                 if (s.from < dateFrom.ValueDate || s.from > dateTo.ValueDate
-                    || s.to.AddDays(-1) < dateFrom.ValueDate || s.to.AddDays(-1) > dateTo.ValueDate
-                    )
+                                                || s.to.AddDays(-1) < dateFrom.ValueDate ||
+                                                s.to.AddDays(-1) > dateTo.ValueDate
+                )
                 {
                     DisplaySubError(Resx.GetString("Vacation_ErrSubDateSubstitution"), true);
                     EditSub(s);
@@ -1017,10 +1079,11 @@ namespace Kesco.App.Web.Docs.Vacation
 
                 try
                 {
-                    var obj_code = DBManager.ExecuteScalar(SQLQueries.INSERT_Замещения, CommandType.Text, Config.DS_user,
+                    var obj_code = DBManager.ExecuteScalar(SQLQueries.INSERT_Замещения, CommandType.Text,
+                        Config.DS_user,
                         ins_args);
                     if (obj_code != DBNull.Value)
-                        s.code = Decimal.ToInt32((Decimal) obj_code);
+                        s.code = decimal.ToInt32((decimal) obj_code);
                 }
                 catch (DetailedException dex)
                 {
@@ -1035,7 +1098,7 @@ namespace Kesco.App.Web.Docs.Vacation
 
             if (fFixErrors)
             {
-                lock (syncCacheSubs)
+                lock (SyncCacheSubs)
                 {
                     Cache.Remove(Doc.Id + CacheSubs);
                 }
@@ -1072,10 +1135,7 @@ namespace Kesco.App.Web.Docs.Vacation
                 //Подбираем дату окончания отпуска
                 d_to = d_from.AddDays(nDays);
 
-                while (nDays > GetTotalDays(d_from, d_to))
-                {
-                    d_to = d_to.AddDays(1);
-                }
+                while (nDays > GetTotalDays(d_from, d_to)) d_to = d_to.AddDays(1);
             }
 
             //Обновляем поля формы в соответствии с расчетом
@@ -1117,15 +1177,12 @@ namespace Kesco.App.Web.Docs.Vacation
             args.Add("@ПервыйДень", from);
 
             if (null != _company && !_company.Unavailable && _company.RegionID > 0)
-            {
                 args.Add("@КодТерритории", _company.RegionID);
-            }
             else
-            {
-                args.Add("@КодТерритории", defTerritory);
-            }
+                args.Add("@КодТерритории", DefTerritory);
 
-            var first_wd = DBManager.ExecuteScalar(SQLQueries.SELECT_ПервыйРабочийДень, CommandType.Text, Config.DS_user,
+            var first_wd = DBManager.ExecuteScalar(SQLQueries.SELECT_ПервыйРабочийДень, CommandType.Text,
+                Config.DS_user,
                 args);
             return (DateTime) first_wd;
         }
@@ -1142,13 +1199,9 @@ namespace Kesco.App.Web.Docs.Vacation
             args.Add("@От", from);
             args.Add("@До", to);
             if (null != _company && !_company.Unavailable && _company.RegionID > 0)
-            {
                 args.Add("@КодТерритории", _company.RegionID);
-            }
             else
-            {
-                args.Add("@КодТерритории", defTerritory);
-            }
+                args.Add("@КодТерритории", DefTerritory);
 
             var days = DBManager.ExecuteScalar(SQLQueries.SELECT_Праздники, CommandType.Text, Config.DS_user, args);
             if (days == null || days.Equals(DBNull.Value)) return 0;
@@ -1161,9 +1214,7 @@ namespace Kesco.App.Web.Docs.Vacation
         private void TestEmplInfoFilled()
         {
             if (selPerson.ValueInt.HasValue && selCompany.ValueInt.HasValue && selDirector.ValueInt.HasValue)
-            {
                 V4SetFocus(cbType.ID);
-            }
         }
 
         /// <summary>
@@ -1201,13 +1252,11 @@ namespace Kesco.App.Web.Docs.Vacation
         private void SetFocusToFirstEmptyField()
         {
             foreach (var ctrl in V4Controls.Values)
-            {
                 if (ctrl.IsRequired && !ctrl.IsReadOnly && !ctrl.IsDisabled && ctrl.Visible && ctrl.Value.Length == 0)
                 {
                     V4SetFocus(ctrl.ID);
                     return;
                 }
-            }
         }
 
         //Класс описывающий замещения сотрудников

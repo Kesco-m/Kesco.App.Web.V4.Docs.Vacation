@@ -43,7 +43,7 @@
         <% } %>
         <div class="spacer"></div>
 
-        <table style="margin-left: 0px;">
+        <table style="border-spacing: 0 0;">
             <tr>
                 <td><%= Resources.Resx.GetString("Vacation_Person") %>:</td>
                 <td>
@@ -98,16 +98,16 @@
                 </td>
             </tr>
         </table>
-        
-        <% StartRenderVariablePart(Response.Output); %>
+        <br/>
+        <% StartRenderVariablePart(Response.Output, 200, 320, 550); %>
         <% EndRenderVariablePart(Response.Output); %>
         
-          <hr id="addSubRowHr" align="left" style="margin-top: 10px; width: 547px; border: 1px inset whitesmoke; "/>
+          <hr id="addSubRowHr" align="left" class="marginL" style="margin-top: 10px; width: 550px; border: 1px inset whitesmoke; "/>
         
-          <fieldset id="addSubRow">
+        <fieldset id="addSubRow" class="marginL">
             <legend><%= Resources.Resx.GetString("Vacation_SubTitle") %></legend>
             <table id="tSub"></table>
-            <table id="tAddSub">
+            <table id="tAddSub" style="border-spacing: 0 0;">
                 <tr>
                     <td style="white-space: nowrap" colspan="3"><%= Resources.Resx.GetString("Vacation_SubEmployee") %>:</td>
                 </tr>
@@ -125,7 +125,7 @@
 </div>
 
 <div id="editSub">
-    <table>
+    <table style="border-spacing: 0 0;">
         <tr>
             <td style="white-space: nowrap;"><%= Resources.Resx.GetString("Vacation_SubEmployeeLbl")%>:</td>
             <td>
